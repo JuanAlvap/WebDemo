@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if mode == "htap" %}
+<!-- HTAP: se refresca solo -->
+<meta http-equiv="refresh" content="60">
+{% endif %}
+
+<h2>Panel Admin</h2>
+
+<div class="card">
+  <div class="row">
+    <a href="/admin?mode=htap">⚡ HTAP (en vivo)</a>
+    <a href="/admin?mode=olap">📦 OLAP (batch)</a>
+  </div>
+  <p style="margin-top:10px;">
+    {% if mode == "htap" %}
+    <b>HTAP:</b> el reporte se calcula directo desde las tablas OLTP y se actualiza solo cada 60s.
+    {% else %}
+    <b>OLAP:</b> el reporte sale de una tabla resumen y solo cambia cuando ejecutas ETL.
+    {% endif %}
+  </p>
+
+  {% if mode == "olap" %}
+  <form method="POST" action="/admin/refresh_olap" style="margin-top:10px;">
+    <button type="submit">Actualizar OLAP (Ejecutar ETL)</button>
+  </form>
+  {% if last_update %}
+  <p style="margin-top:10px;">Última actualización OLAP: <b>{{ last_update }}</b></p>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Reporte por producto</h3>
+  <table>
+    <tr>
+      <th>Producto</th>
+      <th>Unidades</th>
+      <th>Ingreso</th>
+    </tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r["Nombre"] }}</td>
+      <td>{{ r["Unidades"] }}</td>
+      <td>{{ "{:,.0f}".format(r["IngresoTotal"]) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h3>Gráfico (Ingreso por producto)</h3>
+  <canvas id="chart" height="120"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const labels = [
+    {% for r in rows %}
+      "{{ r["Nombre"] }}"{% if not loop.last %}, {% endif %}
+    {% endfor %}
+  ];
+
+  const values = [
+    {% for r in rows %}
+      {{ r["IngresoTotal"] }}{% if not loop.last %}, {% endif %}
+    {% endfor %}
+  ];
+
+  const ctx = document.getElementById('chart');
+  new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Ingreso', data: values }] },
+    options: { responsive: true }
+  });
+</script>
+
+{% endblock %}

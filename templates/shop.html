@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Tienda</h2>
+<p>Hola, <b>{{ user.name }}</b> 👋</p>
+
+<div class="card">
+  <h3>Productos</h3>
+  <table>
+    <tr>
+      <th>Producto</th>
+      <th>Precio</th>
+      <th>Stock</th>
+      <th>Comprar</th>
+    </tr>
+    {% for p in products %}
+    <tr>
+      <td>{{ p["Nombre"] }}</td>
+      <td>{{ "{:,.0f}".format(p["Precio"]) }}</td>
+      <td>{{ p["Stock"] }}</td>
+      <td>
+        <form method="POST" action="/buy" style="display:flex; gap:8px; align-items:center;">
+          <input type="hidden" name="product_id" value="{{ p['ProductoID'] }}">
+          <input type="number" name="qty" min="1" value="1">
+          <button type="submit">Comprar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% endblock %}

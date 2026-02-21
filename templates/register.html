@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Registro</h2>
+
+<div class="card">
+  <form method="POST">
+    <div>
+      <label>Nombre:</label><br>
+      <input name="name" required>
+    </div>
+    <div style="margin-top:10px;">
+      <label>Email:</label><br>
+      <input name="email" type="email" required>
+    </div>
+    <div style="margin-top:10px;">
+      <label>Contraseña:</label><br>
+      <input name="password" type="password" required>
+    </div>
+    <div style="margin-top:12px;">
+      <button type="submit">Crear cuenta</button>
+    </div>
+  </form>
+</div>
+
+<p><a href="/login">Volver al login</a></p>
+{% endblock %}
