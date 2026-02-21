@@ -202,8 +202,11 @@ def buy():
 
         total = float(precio) * qty
 
-        cur.execute("INSERT INTO dbo.Ordenes (UsuarioID, Total) VALUES (?, ?)", (usuario_id, total))
-        cur.execute("SELECT SCOPE_IDENTITY()")
+        cur.execute("""
+            INSERT INTO dbo.Ordenes (UsuarioID, Total) 
+            OUTPUT inserted.OrdenID
+            VALUES (?, ?)
+        """, (usuario_id, total))
         orden_id = int(cur.fetchone()[0])
 
         cur.execute("""
