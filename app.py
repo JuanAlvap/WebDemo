@@ -258,9 +258,29 @@ def admin():
             ORDER BY IngresoTotal DESC;
         """)
         last_update = rows[0]["UltimaActualizacion"] if rows else None
-        return render_template("admin.html",
-                               mode=mode, rows=rows, last_update=last_update,
-                               user=session["user"])
+
+        top_rows = fetchall_dict("""
+            SELECT DiaSemana, Nombre, Unidades
+            FROM dbo.ReporteTopProductoDiaSemana
+            ORDER BY DiaSemana;
+        """)
+
+        days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
+        top_labels = days[:]  # fijo 7 días
+        top_units = [0]*7
+        top_products = ["Sin ventas"]*7
+
+        for r in top_rows:
+            i = int(r["DiaSemana"]) - 1  # 1..7 -> 0..6
+            if 0 <= i < 7:
+                top_units[i] = int(r["Unidades"])
+                top_products[i] = r["Nombre"]
+
+        return render_template(
+            "admin.html",
+            mode=mode, rows=rows, last_update=last_update, user=session["user"],
+            top_labels=top_labels, top_units=top_units,top_products=top_products
+            )
     else:
         # HTAP: calcula EN VIVO desde OLTP (sin depender de ETL)
         rows = fetchall_dict("""
@@ -275,9 +295,40 @@ def admin():
             GROUP BY p.ProductoID, p.Nombre
             ORDER BY IngresoTotal DESC;
         """)
+        
+        top_rows = fetchall_dict("""
+            SET DATEFIRST 1;
+            SELECT DiaSemana, Nombre, Unidades
+            FROM (
+                SELECT
+                    DATEPART(WEEKDAY, o.Fecha) AS DiaSemana,
+                    p.Nombre,
+                    SUM(d.Cantidad) AS Unidades,
+                    ROW_NUMBER() OVER (PARTITION BY DATEPART(WEEKDAY, o.Fecha) ORDER BY SUM(d.Cantidad) DESC) AS rn
+                FROM dbo.Ordenes o
+                JOIN dbo.DetalleOrden d ON d.OrdenID = o.OrdenID
+                JOIN dbo.Productos p ON p.ProductoID = d.ProductoID
+                GROUP BY DATEPART(WEEKDAY, o.Fecha), p.Nombre
+            ) sub
+            WHERE rn = 1
+            ORDER BY DiaSemana;
+        """)
+
+        days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
+        top_labels = days[:]
+        top_units = [0]*7
+        top_products = ["Sin ventas"]*7
+
+        for r in top_rows:
+            i = int(r["DiaSemana"]) - 1
+            if 0 <= i < 7:
+                top_units[i] = int(r["Unidades"])
+                top_products[i] = r["Nombre"]
+        
         return render_template("admin.html",
                                mode=mode, rows=rows, last_update=None,
-                               user=session["user"])
+                               user=session["user"],
+                               top_labels=top_labels, top_units=top_units, top_products=top_products)
     
 @app.route("/admin/refresh_olap", methods=["POST"])
 @role_required("admin")

@@ -69,6 +69,20 @@ CREATE TABLE dbo.ReporteVentasProducto (
 );
 GO
 
+IF OBJECT_ID('dbo.ReporteTopProductoDiaSemana') IS NOT NULL
+    DROP TABLE dbo.ReporteTopProductoDiaSemana;
+GO
+
+CREATE TABLE dbo.ReporteTopProductoDiaSemana (
+    DiaSemana  INT NOT NULL,              -- 1=Lunes ... 7=Domingo (lo fijamos en el ETL)
+    ProductoID INT NOT NULL,
+    Nombre     NVARCHAR(100) NOT NULL,
+    Unidades   INT NOT NULL,
+    UltimaActualizacion DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+    CONSTRAINT PK_ReporteTopProductoDiaSemana PRIMARY KEY (DiaSemana, ProductoID)
+);
+GO
+
 -- "ETL" básico: recalcula el resumen desde OLTP
 CREATE OR ALTER PROCEDURE dbo.sp_ActualizarReporteVentasProducto
 AS
@@ -89,6 +103,54 @@ BEGIN
     LEFT JOIN dbo.DetalleOrden d ON d.ProductoID = p.ProductoID
     LEFT JOIN dbo.Ordenes o ON o.OrdenID = d.OrdenID
     GROUP BY p.ProductoID, p.Nombre;
+
+    -- ---------------------------------------------------------
+-- NUEVO: Reporte TOP producto por día de la semana (OLAP)
+-- ---------------------------------------------------------
+
+-- Para que 1 = Lunes, 7 = Domingo (importante para la gráfica)
+SET DATEFIRST 1;
+
+-- Tabla temporal con ventas agregadas por (día, producto)
+IF OBJECT_ID('tempdb..#VentasDiaProducto') IS NOT NULL
+    DROP TABLE #VentasDiaProducto;
+
+CREATE TABLE #VentasDiaProducto (
+    DiaSemana INT,
+    ProductoID INT,
+    Unidades INT
+);
+
+INSERT INTO #VentasDiaProducto (DiaSemana, ProductoID, Unidades)
+SELECT
+    DATEPART(WEEKDAY, o.Fecha) AS DiaSemana,
+    d.ProductoID,
+    SUM(d.Cantidad) AS Unidades
+FROM dbo.Ordenes o
+JOIN dbo.DetalleOrden d ON d.OrdenID = o.OrdenID
+GROUP BY DATEPART(WEEKDAY, o.Fecha), d.ProductoID;
+
+-- Limpiar el resumen OLAP
+TRUNCATE TABLE dbo.ReporteTopProductoDiaSemana;
+
+-- Insertar el/los productos TOP por día (si hay empate, mete ambos)
+INSERT INTO dbo.ReporteTopProductoDiaSemana (DiaSemana, ProductoID, Nombre, Unidades, UltimaActualizacion)
+SELECT
+    v.DiaSemana,
+    v.ProductoID,
+    p.Nombre,
+    v.Unidades,
+    SYSDATETIME()
+FROM #VentasDiaProducto v
+JOIN (
+    SELECT DiaSemana, MAX(Unidades) AS MaxUnidades
+    FROM #VentasDiaProducto
+    GROUP BY DiaSemana
+) mx
+    ON mx.DiaSemana = v.DiaSemana AND mx.MaxUnidades = v.Unidades
+JOIN dbo.Productos p
+    ON p.ProductoID = v.ProductoID;
+
 END
 GO
 
@@ -96,3 +158,9 @@ GO
 select * from dbo.Usuarios;
 
 select * from dbo.Productos;
+
+Select * from dbo.Ordenes;
+
+select * from dbo.DetalleOrden;
+
+select * from ReporteTopProductoDiaSemana;
