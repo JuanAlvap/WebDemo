@@ -164,3 +164,5 @@ Select * from dbo.Ordenes;
 select * from dbo.DetalleOrden;
 
 select * from ReporteTopProductoDiaSemana;
+
+update dbo.Productos set Stock = 100 where ProductoID > 0;
