@@ -88,6 +88,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_ActualizarReporteVentasProducto
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET DATEFIRST 1;
 
     -- Recalcular completo (simple para clase)
     TRUNCATE TABLE dbo.ReporteVentasProducto;
@@ -108,8 +109,10 @@ BEGIN
 -- NUEVO: Reporte TOP producto por día de la semana (OLAP)
 -- ---------------------------------------------------------
 
--- Para que 1 = Lunes, 7 = Domingo (importante para la gráfica)
-SET DATEFIRST 1;
+-- Para calcular la semana actual
+    DECLARE @Hoy DATE = CAST(SYSDATETIME() AS DATE);
+    DECLARE @InicioSemana DATE = DATEADD(DAY, 1 - DATEPART(WEEKDAY, @Hoy), @Hoy);
+    DECLARE @FinSemana DATE = DATEADD(DAY, 7, @InicioSemana);
 
 -- Tabla temporal con ventas agregadas por (día, producto)
 IF OBJECT_ID('tempdb..#VentasDiaProducto') IS NOT NULL
@@ -128,6 +131,8 @@ SELECT
     SUM(d.Cantidad) AS Unidades
 FROM dbo.Ordenes o
 JOIN dbo.DetalleOrden d ON d.OrdenID = o.OrdenID
+WHERE o.Fecha >= @InicioSemana
+    AND o.Fecha < @FinSemana
 GROUP BY DATEPART(WEEKDAY, o.Fecha), d.ProductoID;
 
 -- Limpiar el resumen OLAP

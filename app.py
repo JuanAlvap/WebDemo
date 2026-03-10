@@ -309,17 +309,26 @@ def admin():
         
         top_rows = fetchall_dict("""
             SET DATEFIRST 1;
+            DECLARE @Hoy DATE = CAST(SYSDATETIME() AS DATE);
+            DECLARE @InicioSemana DATE = DATEADD(DAY, 1 - DATEPART(WEEKDAY, @Hoy), @Hoy);
+            DECLARE @FinSemana DATE = DATEADD(DAY, 7, @InicioSemana);
+
             SELECT DiaSemana, Nombre, Unidades
             FROM (
                 SELECT
                     DATEPART(WEEKDAY, o.Fecha) AS DiaSemana,
                     p.Nombre,
                     SUM(d.Cantidad) AS Unidades,
-                    ROW_NUMBER() OVER (PARTITION BY DATEPART(WEEKDAY, o.Fecha) ORDER BY SUM(d.Cantidad) DESC) AS rn
+                    ROW_NUMBER() OVER (
+                        PARTITION BY DATEPART(WEEKDAY, o.Fecha)
+                        ORDER BY SUM(d.Cantidad) DESC, p.ProductoID ASC
+                    ) AS rn
                 FROM dbo.Ordenes o
                 JOIN dbo.DetalleOrden d ON d.OrdenID = o.OrdenID
                 JOIN dbo.Productos p ON p.ProductoID = d.ProductoID
-                GROUP BY DATEPART(WEEKDAY, o.Fecha), p.Nombre
+                WHERE o.Fecha >= @InicioSemana
+                  AND o.Fecha < @FinSemana
+                                GROUP BY DATEPART(WEEKDAY, o.Fecha), p.Nombre, p.ProductoID
             ) sub
             WHERE rn = 1
             ORDER BY DiaSemana;
