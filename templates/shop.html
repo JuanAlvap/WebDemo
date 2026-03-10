@@ -5,6 +5,7 @@
 
 <div class="card">
   <h3>Productos</h3>
+  <div class="table-wrap">
   <table>
     <tr>
       <th>Producto</th>
@@ -18,7 +19,7 @@
       <td>{{ "{:,.0f}".format(p["Precio"]) }}</td>
       <td>{{ p["Stock"] }}</td>
       <td>
-        <form method="POST" action="/buy" style="display:flex; gap:8px; align-items:center;">
+        <form method="POST" action="/buy" class="row" style="gap:8px; align-items:center;">
           <input type="hidden" name="product_id" value="{{ p['ProductoID'] }}">
           <input type="number" name="qty" min="1" value="1">
           <button type="submit">Comprar</button>
@@ -27,6 +28,7 @@
     </tr>
     {% endfor %}
   </table>
+  </div>
 </div>
 
 {% endblock %}

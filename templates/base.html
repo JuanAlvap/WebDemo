@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mini E-commerce Demo</title>
   <style>
     :root {
@@ -49,6 +50,7 @@
       padding: 10px 12px;
       border-radius: 12px;
       border: 1px solid transparent;
+      display: inline-block;
     }
 
     .nav a:hover {
@@ -79,6 +81,7 @@
       overflow: hidden;
       border-radius: 12px;
       border: 1px solid var(--border);
+      min-width: 640px;
     }
 
     th,
@@ -106,6 +109,8 @@
       background: rgba(255, 255, 255, 0.03);
       color: var(--text);
       outline: none;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     button {
@@ -143,6 +148,40 @@
       gap: 10px;
       align-items: center;
       flex-wrap: wrap;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+
+    .auth-card {
+      max-width: 520px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 14px;
+      }
+
+      .nav {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      h2 {
+        font-size: 1.35rem;
+      }
+
+      .card {
+        padding: 12px;
+      }
+
+      button {
+        width: 100%;
+      }
     }
   </style>
 </head>
