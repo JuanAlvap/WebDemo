@@ -261,7 +261,18 @@ def admin():
 
         top_rows = fetchall_dict("""
             SELECT DiaSemana, Nombre, Unidades
-            FROM dbo.ReporteTopProductoDiaSemana
+            FROM (
+                SELECT
+                    DiaSemana,
+                    Nombre,
+                    Unidades,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY DiaSemana
+                        ORDER BY Unidades DESC, ProductoID ASC
+                    ) AS rn
+                FROM dbo.ReporteTopProductoDiaSemana
+            ) t
+            WHERE rn = 1
             ORDER BY DiaSemana;
         """)
 

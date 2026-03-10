@@ -133,23 +133,29 @@ GROUP BY DATEPART(WEEKDAY, o.Fecha), d.ProductoID;
 -- Limpiar el resumen OLAP
 TRUNCATE TABLE dbo.ReporteTopProductoDiaSemana;
 
--- Insertar el/los productos TOP por día (si hay empate, mete ambos)
+-- Insertar solo 1 producto TOP por día
+-- Si hay empate en unidades, gana el ProductoID menor (regla fija y simple)
 INSERT INTO dbo.ReporteTopProductoDiaSemana (DiaSemana, ProductoID, Nombre, Unidades, UltimaActualizacion)
 SELECT
-    v.DiaSemana,
-    v.ProductoID,
+    x.DiaSemana,
+    x.ProductoID,
     p.Nombre,
-    v.Unidades,
+    x.Unidades,
     SYSDATETIME()
-FROM #VentasDiaProducto v
-JOIN (
-    SELECT DiaSemana, MAX(Unidades) AS MaxUnidades
-    FROM #VentasDiaProducto
-    GROUP BY DiaSemana
-) mx
-    ON mx.DiaSemana = v.DiaSemana AND mx.MaxUnidades = v.Unidades
+FROM (
+    SELECT
+        v.DiaSemana,
+        v.ProductoID,
+        v.Unidades,
+        ROW_NUMBER() OVER (
+            PARTITION BY v.DiaSemana
+            ORDER BY v.Unidades DESC, v.ProductoID ASC
+        ) AS rn
+    FROM #VentasDiaProducto v
+) x
 JOIN dbo.Productos p
-    ON p.ProductoID = v.ProductoID;
+    ON p.ProductoID = x.ProductoID
+WHERE x.rn = 1;
 
 END
 GO
